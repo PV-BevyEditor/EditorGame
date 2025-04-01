@@ -1,0 +1,5 @@
+({
+    "player": Image (
+        sprite: "sprites/Tank.png",
+    ),
+})
