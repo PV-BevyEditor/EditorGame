@@ -3,6 +3,22 @@
 version = 4
 
 [[package]]
+name = "ab_glyph"
+version = "0.2.29"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ec3672c180e71eeaaac3a541fbbc5f5ad4def8b747c595ad30d674e43049f7b0"
+dependencies = [
+ "ab_glyph_rasterizer",
+ "owned_ttf_parser",
+]
+
+[[package]]
+name = "ab_glyph_rasterizer"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c71b1793ee61086797f5c80b6efa2b8ffa6d5dd703f118545808a7f2e27f7046"
+
+[[package]]
 name = "accesskit"
 version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2099,6 +2115,40 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96a6ac251f4a2aca6b3f91340350eab87ae57c3f127ffeb585e92bd336717991"
 
 [[package]]
+name = "darling"
+version = "0.20.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc7f46116c46ff9ab3eb1597a45688b6715c6e628b5c133e288e709a29bcb4ee"
+dependencies = [
+ "darling_core",
+ "darling_macro",
+]
+
+[[package]]
+name = "darling_core"
+version = "0.20.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0d00b9596d185e565c2207a0b01f8bd1a135483d02d9b7b0a54b11da8d53412e"
+dependencies = [
+ "fnv",
+ "ident_case",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "darling_macro"
+version = "0.20.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc34b93ccb385b40dc71c6fceac4b2ad23662c7eeb248cf10d529b7e055b6ead"
+dependencies = [
+ "darling_core",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "dasp_sample"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2197,6 +2247,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f25c0e292a7ca6d6498557ff1df68f32c99850012b6ea401cf8daf771f22ff53"
 
 [[package]]
+name = "ecolor"
+version = "0.29.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "775cfde491852059e386c4e1deb4aef381c617dc364184c6f6afee99b87c402b"
+dependencies = [
+ "emath",
+]
+
+[[package]]
 name = "editorgame"
 version = "0.1.0"
 dependencies = [
@@ -2209,12 +2268,18 @@ dependencies = [
  "bevy_rapier2d",
  "bevy_spatial",
  "bytemuck",
+ "getrandom 0.3.2",
  "gltf",
  "image",
+ "once_cell",
  "rand 0.9.0",
  "rfd",
  "ron 0.9.0",
  "serde",
+ "transform-gizmo-bevy",
+ "uuid",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -2222,6 +2287,12 @@ name = "either"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
+
+[[package]]
+name = "emath"
+version = "0.29.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1fe0049ce51d0fb414d029e668dd72eb30bc2b739bf34296ed97bd33df544f3"
 
 [[package]]
 name = "ena"
@@ -2271,6 +2342,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a3d8a32ae18130a3c84dd492d4215c3d913c3b07c6b63c2eb3eb7ff1101ab7bf"
 
 [[package]]
+name = "enum_dispatch"
+version = "0.3.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa18ce2bc66555b3218614519ac839ddb759a7d6720732f979ef8d13be147ecd"
+dependencies = [
+ "once_cell",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "enumflags2"
 version = "0.7.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2290,6 +2373,48 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "enumset"
+version = "1.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d07a4b049558765cef5f0c1a273c3fc57084d768b44d2f98127aef4cceb17293"
+dependencies = [
+ "enumset_derive",
+]
+
+[[package]]
+name = "enumset_derive"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "59c3b24c345d8c314966bdc1832f6c2635bfcce8e7cf363bd115987bba2ee242"
+dependencies = [
+ "darling",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "epaint"
+version = "0.29.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a32af8da821bd4f43f2c137e295459ee2e1661d87ca8779dfa0eaf45d870e20f"
+dependencies = [
+ "ab_glyph",
+ "ahash",
+ "ecolor",
+ "emath",
+ "epaint_default_fonts",
+ "nohash-hasher",
+ "parking_lot",
+]
+
+[[package]]
+name = "epaint_default_fonts"
+version = "0.29.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "483440db0b7993cf77a20314f08311dbe95675092405518c0677aa08c151a3ea"
 
 [[package]]
 name = "equivalent"
@@ -2582,9 +2707,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73fea8450eea4bac3940448fb7ae50d91f034f941199fcd9d909a5a07aa455f0"
 dependencies = [
  "cfg-if",
+ "js-sys",
  "libc",
  "r-efi",
  "wasi 0.14.2+wasi-0.2.4",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -2649,6 +2776,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8babf46d4c1c9d92deac9f7be466f76dfc4482b6452fc5024b5e8daf6ffeb3ee"
 dependencies = [
  "bytemuck",
+ "mint",
  "rand 0.8.5",
  "serde",
 ]
@@ -2972,6 +3100,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "ident_case"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
+
+[[package]]
 name = "idna"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3183,7 +3317,6 @@ dependencies = [
  "num-traits",
  "ordered-float",
  "paste",
- "rayon",
  "typenum",
 ]
 
@@ -3441,6 +3574,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "mint"
+version = "0.5.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e53debba6bda7a793e5f99b8dacf19e626084f525f7829104ba9898f367d85ff"
+
+[[package]]
 name = "naga"
 version = "23.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3581,6 +3720,12 @@ dependencies = [
  "libc",
  "memoffset",
 ]
+
+[[package]]
+name = "nohash-hasher"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2bf50223579dc7cdcfb3bfcacf7069ff68243f8c363f62ffa99cf000a6b9c451"
 
 [[package]]
 name = "nom"
@@ -4039,6 +4184,15 @@ name = "overload"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
+
+[[package]]
+name = "owned_ttf_parser"
+version = "0.25.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "22ec719bbf3b2a81c109a4e20b1f129b5566b7dce654bc3872f6a05abf82b2c4"
+dependencies = [
+ "ttf-parser 0.25.1",
+]
 
 [[package]]
 name = "parking"
@@ -5290,6 +5444,46 @@ dependencies = [
 ]
 
 [[package]]
+name = "transform-gizmo"
+version = "0.5.1"
+dependencies = [
+ "ahash",
+ "ecolor",
+ "emath",
+ "enum_dispatch",
+ "enumset",
+ "epaint",
+ "glam",
+ "mint",
+]
+
+[[package]]
+name = "transform-gizmo-bevy"
+version = "0.5.1"
+dependencies = [
+ "bevy",
+ "bevy_app",
+ "bevy_asset",
+ "bevy_core",
+ "bevy_core_pipeline",
+ "bevy_derive",
+ "bevy_ecs",
+ "bevy_image",
+ "bevy_input",
+ "bevy_log",
+ "bevy_math",
+ "bevy_pbr",
+ "bevy_reflect",
+ "bevy_render",
+ "bevy_transform",
+ "bevy_utils",
+ "bevy_window",
+ "bytemuck",
+ "transform-gizmo",
+ "uuid",
+]
+
+[[package]]
 name = "ttf-parser"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5300,6 +5494,12 @@ name = "ttf-parser"
 version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2c591d83f69777866b9126b24c6dd9a18351f177e49d625920d19f989fd31cf8"
+
+[[package]]
+name = "ttf-parser"
+version = "0.25.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2df906b07856748fa3f6e0ad0cbaa047052d4a7dd609e231c4f72cee8c36f31"
 
 [[package]]
 name = "twox-hash"
@@ -5432,6 +5632,7 @@ checksum = "b3758f5e68192bb96cc8f9b7e2c2cfdabb435499a28499a42f8f984092adad4b"
 dependencies = [
  "getrandom 0.2.15",
  "serde",
+ "wasm-bindgen",
 ]
 
 [[package]]

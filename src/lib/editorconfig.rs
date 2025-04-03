@@ -9,6 +9,17 @@ pub struct EditorSelectionConfiguration {
     pub highlightColour: Color,
 }
 
+pub struct EditorTransformGizmosConfiguration {
+    pub rotationVisible: bool,
+    pub translationVisible: bool,
+    pub scaleVisible: bool,
+    pub arcballVisible: bool,
+
+    pub snapAngle: f32,
+    pub snapDistance: f32,
+    pub snapScale: f32,
+}
+
 #[derive(Component)]
 pub struct EditorConfiguration {
     pub camera: EditorCameraConfiguration,
