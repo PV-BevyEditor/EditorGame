@@ -107,13 +107,7 @@ pub fn mouseInteractions(
             if let Ok((entity, mut outlineVolume)) = clickables.get_mut(*point) {
                 // Handle outline and gizmos
                 outlineVolume.visible = true;
-                // commands.entity(entity).insert(GizmoTarget::default());
-                commands.entity(entity).insert(GizmoTarget {
-                    debug_func: Some(|s: String| {
-                        consoleLog(&s);
-                    }),
-                    ..default()
-                });
+                commands.entity(entity).insert(GizmoTarget::default());
             }
         }
     }
@@ -219,13 +213,7 @@ pub fn syncData(
                         visible: false,
                     },
                     RayCastPickable,
-                    // GizmoTarget::default(),
-                    GizmoTarget {
-                        debug_func: Some(|s: String| {
-                            consoleLog(&s);
-                        }),
-                        ..default()
-                    },
+                    GizmoTarget::default(),
                 ));
             }
         }
