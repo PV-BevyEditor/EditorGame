@@ -154,6 +154,7 @@ impl Runner {
             
             .add_systems(Startup, (setup, setupDynamicAssets).chain())
             .add_systems(Update, (syncData, mouseInteractions, keyboardInteractions, update).chain())
+            .add_systems(PostUpdate, worldFrame)
             .run();
     }
 

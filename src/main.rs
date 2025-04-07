@@ -4,6 +4,8 @@ mod lib {
     pub mod assetloader;
     pub mod components;
     pub mod editorconfig;
+    pub mod editorvisibility;
+    pub mod jscasting;
 }
 mod wasm {
     pub mod definitions;

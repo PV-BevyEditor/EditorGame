@@ -15,7 +15,6 @@ use bevy::{
 use bevy_mesh::Indices;
 use image::load_from_memory;
 use gltf;
-use crate::wasm::definitions::consoleLog;
 
 pub fn loadImage(mut images: ResMut<Assets<Image>>, buffer: &[u8]) -> Result<Handle<Image>, String> {
     let decodedImage = load_from_memory(buffer).expect("Failed to decode image").to_rgba8();
@@ -68,8 +67,6 @@ pub fn loadModel(mut meshes: ResMut<Assets<Mesh>>, buffer: &[u8]) -> Result<Vec<
             if let Some(indices) = reader.read_indices() {
                 let indices = indices.into_u32().collect::<Vec<u32>>();
                 bevyMesh.insert_indices(Indices::U32(indices.clone()));
-
-                consoleLog(&format!("Positions: {}, Indices.length: {},\nIndices: {:?}", &positions.len(), indices.clone().len(), &indices));
             }
 
 

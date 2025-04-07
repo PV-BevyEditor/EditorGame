@@ -1,45 +1,82 @@
 use bevy::{
-    input::mouse::MouseMotion, 
-    picking::pointer::PointerInteraction, 
-    prelude::*, 
-    window::{
+    ecs::system::SystemState, input::mouse::MouseMotion, picking::pointer::PointerInteraction, prelude::*, window::{
         CursorGrabMode, 
         PrimaryWindow, 
-    },
+    }
 };
 use bevy_mod_outline::{
     OutlineStencil,
     OutlineVolume,
 };
+use js_sys::{Object, Reflect, JsString};
 use std::collections::HashMap;
-use transform_gizmo_bevy::prelude::*;
+use transform_gizmo_bevy::{prelude::*, GizmoTransform};
 use crate::{
-    EditorConfiguration, RotationCamera
+    lib::editorvisibility::EditorVisible, wasm::definitions::consoleLog, EditorConfiguration, RotationCamera
 };
 #[cfg(target_arch = "wasm32")]
 use {
     crate::{
         wasm::data::*,
         lib::assetloader::*,
+        triggerInterfaceCallbacks,
         // consoleLog,
     },
     std::sync::atomic::Ordering,
 };
 
+pub fn worldFrame(
+    world: &mut World,
+) {
+    let mut mouseButtonInputState: SystemState<Res<ButtonInput<MouseButton>>> = SystemState::new(world);
+    let mouseButtonInput = mouseButtonInputState.get(world);
+
+    // Need to debug here, as it seems this might be triggering more than once per mouse press
+    if mouseButtonInput.just_pressed(MouseButton::Left) {
+        // let mut testState: SystemState<Query<&GizmoTarget>> = SystemState::new(world);
+        // let gizmoTargets = testState.get(world);
+        // for target in gizmoTargets.iter() {
+        //     let results = target.results(None);
+        //     consoleLog(&format!("Amount of results: {}", results.len()));
+        //     for target in target.results(None) {
+        //         consoleLog(&format!("{:?}", target));
+        //     }
+        // }
+        // consoleLog(&format!("Stuff: {:?}", gizmoTargets.iter().map(|target| target.results(None).iter().collect::<Vec<&GizmoResult>>())));
+
+        let mut gizmoTargetState: SystemState<Query<Entity, With<GizmoTarget>>> = SystemState::new(world);
+        let gizmoTarget = match gizmoTargetState.get(world).get_single() {
+            Ok(target) => target,
+            Err(_) => return triggerInterfaceCallbacks("properties", vec![]),
+        };
+
+        let mut infoVec: Vec<Object> = vec![];
+        for (_, component) in world.inspect_entity(gizmoTarget).enumerate() {
+            if !component.isEditorVisible() { continue; }
+
+            let obj = Object::new();
+
+            Reflect::set(&obj, &JsString::from("name"), &JsString::from(component.name())).unwrap();
+            Reflect::set(&obj, &JsString::from("info"), &component.getInfo(world, gizmoTarget).into()).unwrap();
+
+            infoVec.push(obj);
+        }
+        
+        triggerInterfaceCallbacks("properties", infoVec);
+    }
+}
+
 pub fn mouseInteractions(
     mut windows: Query<&mut Window, With<PrimaryWindow>>,
     mut query: Query<&mut Transform, With<RotationCamera>>,
     mut mouseMotionEvents: EventReader<MouseMotion>,
-    // mut gizmos: Gizmos,
     mut clickables: Query<(Entity, &mut OutlineVolume), (With<Mesh3d>, With<OutlineStencil>)>,
     mut commands: Commands,
     gizmoTargets: Query<Entity, With<GizmoTarget>>,
     mouseButtonInput: Res<ButtonInput<MouseButton>>,
     pointers: Query<&PointerInteraction>,
-    // configQuery: Query<&EditorConfiguration>,
 ) {
     let mut window = windows.single_mut();
-    // let config = configQuery.single();
 
     // Handling consistently pressed buttons
     // Right mouse button:
@@ -68,9 +105,15 @@ pub fn mouseInteractions(
 
         if let Some((point, _normal)) = pointers.iter().filter_map(|interaction| interaction.get_nearest_hit()).into_iter().nth(0) {
             if let Ok((entity, mut outlineVolume)) = clickables.get_mut(*point) {
-
+                // Handle outline and gizmos
                 outlineVolume.visible = true;
-                commands.entity(entity).insert(GizmoTarget::default());
+                // commands.entity(entity).insert(GizmoTarget::default());
+                commands.entity(entity).insert(GizmoTarget {
+                    debug_func: Some(|s: String| {
+                        consoleLog(&s);
+                    }),
+                    ..default()
+                });
             }
         }
     }
@@ -176,7 +219,13 @@ pub fn syncData(
                         visible: false,
                     },
                     RayCastPickable,
-                    GizmoTarget::default(),
+                    // GizmoTarget::default(),
+                    GizmoTarget {
+                        debug_func: Some(|s: String| {
+                            consoleLog(&s);
+                        }),
+                        ..default()
+                    },
                 ));
             }
         }
@@ -188,4 +237,10 @@ pub fn syncData(
     }
 }
 
-pub fn update() {}
+pub fn update(
+    mut gizmoEvents: EventReader<GizmoTransform>,
+) {
+    for event in gizmoEvents.read() {
+        consoleLog(&format!("{:?}", event));
+    }
+}

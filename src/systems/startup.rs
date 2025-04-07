@@ -84,6 +84,6 @@ pub fn setupDynamicAssets(
             visible: false,
         },
         RayCastPickable,
-        GizmoTarget::default(),
+        // GizmoTarget::default(),
     ));
 }
