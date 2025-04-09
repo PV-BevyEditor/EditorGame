@@ -4,3 +4,6 @@ rustflags = ['--cfg=getrandom_backend="wasm_js"']
 
 [alias]
 build-wasm = "build --target wasm32-unknown-unknown --release"
+
+[build]
+target = "wasm32-unknown-unknown"

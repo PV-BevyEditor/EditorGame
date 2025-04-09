@@ -12,7 +12,7 @@ use js_sys::{Object, Reflect, JsString};
 use std::collections::HashMap;
 use transform_gizmo_bevy::{prelude::*, GizmoTransform};
 use crate::{
-    lib::editorvisibility::EditorVisible, wasm::definitions::consoleLog, EditorConfiguration, RotationCamera
+    lib::editorvisibility::EditorVisible, wasm::definitions::{addToHistory, consoleLog}, EditorConfiguration, RotationCamera
 };
 #[cfg(target_arch = "wasm32")]
 use {
@@ -228,7 +228,21 @@ pub fn syncData(
 pub fn update(
     mut gizmoEvents: EventReader<GizmoTransform>,
 ) {
-    for event in gizmoEvents.read() {
-        consoleLog(&format!("{:?}", event));
+    for gizmoTransform in gizmoEvents.read() {
+        // consoleLog(&format!("{:?}", event));
+        let undoAction = Box::new(move || {
+            let entity = gizmoTransform.0;
+            
+        }) as Box<dyn Fn() + 'static>;
+        let redoAction = Box::new(move || {
+            let entity = gizmoTransform.0;
+            
+        }) as Box<dyn Fn() + 'static>;
+
+        addToHistory(
+            undoAction,
+            redoAction, 
+            "Transform mesh",
+        );
     }
 }
