@@ -1,3 +1,7 @@
 [tasks.wasm-bindgen]
 command = "wasm-bindgen"
 args = ["--out-dir", "./out/", "--target", "web", "./target/wasm32-unknown-unknown/release/editorgame.wasm"]
+
+[tasks.wasm-bindgen-and-move]
+command = "wasm-bindgen"
+args = ["--out-dir", "../BevyEditor/src/lib/webbuild/out", "--target", "web", "./target/wasm32-unknown-unknown/release/editorgame.wasm"]

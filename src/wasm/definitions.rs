@@ -1,5 +1,18 @@
+use std::sync::{Arc, Mutex};
+
+use transform_gizmo_bevy::{GizmoResult, GizmoTransform};
 use wasm_bindgen::prelude::*;
+use bevy::prelude::*;
 use js_sys::{Array, Function, Object};
+
+struct HistoryActionQueue {
+    actions: Vec<(HistoryActionType, )>,
+}
+
+enum HistoryActionType {
+    Undo,
+    Redo,
+}
 
 #[wasm_bindgen]
 extern "C" {
@@ -29,12 +42,51 @@ pub fn triggerInterfaceCallbacks(callbackType: &str, info: Vec<Object>) {
     }
 }
 
-pub fn addToHistory(undoAction: Box<dyn Fn()>, redoAction: Box<dyn Fn()>, display: &str) {
+fn performUndo(_entity: &'static Entity, transform: Arc<Mutex<&mut Transform>>, result: &'static GizmoResult) {
+    match result {
+        GizmoResult::Translation { delta: _, total } => {
+            transform.lock().unwrap().translation -= Vec3::new(total.x as f32, total.y as f32, total.z as f32);
+        },
+        GizmoResult::Rotation { axis, delta: _, total, is_view_axis: _ } => {
+            // transform.rotation = transform.rotation * Quat::from_axis_angle(Vec3::new(axis.x as f32, axis.y as f32, axis.z as f32), -total as f32);
+            transform.lock().unwrap().rotation *= Quat::from_axis_angle(Vec3::new(axis.x as f32, axis.y as f32, axis.z as f32), -total as f32);
+        },
+        GizmoResult::Scale { total } => {
+            // transform.scale = transform.scale / Vec3::new(total.x as f32, total.y as f32, total.z as f32);
+            transform.lock().unwrap().scale /= Vec3::new(total.x as f32, total.y as f32, total.z as f32);
+        },
+        _ => {},
+    }
+}
+fn performRedo(_entity: &'static Entity, transform: Arc<Mutex<&mut Transform>>, result: &'static GizmoResult) {
+    match result {
+        GizmoResult::Translation { delta: _, total } => {
+            transform.lock().unwrap().translation += Vec3::new(total.x as f32, total.y as f32, total.z as f32);
+        },
+        GizmoResult::Rotation { axis, delta: _, total, is_view_axis: _ } => {
+            transform.lock().unwrap().rotation *= Quat::from_axis_angle(Vec3::new(axis.x as f32, axis.y as f32, axis.z as f32), *total as f32);
+        },
+        GizmoResult::Scale { total } => {
+            transform.lock().unwrap().scale *= Vec3::new(total.x as f32, total.y as f32, total.z as f32);
+        },
+        _ => {},
+    }
+}
+
+pub fn addToHistory(gizmoTransform: &'static GizmoTransform, transform: &'static mut Transform, display: &str) {
+    let transform = Arc::new(Mutex::new(transform));
+    let cloneForUndo = Arc::clone(&transform);
+    let cloneForRedo = Arc::clone(&transform);
+
     dirtyAdd(
         "viewport", 
-        Closure::wrap(Box::new(undoAction) as Box<dyn Fn()>).as_ref().unchecked_ref(),
-        Closure::wrap(Box::new(redoAction) as Box<dyn Fn()>).as_ref().unchecked_ref(),
-        display, 
+        Closure::wrap(Box::new(move || {
+            performUndo(&gizmoTransform.0, cloneForUndo.clone(), &gizmoTransform.1);
+        }) as Box<dyn FnMut()>).as_ref().unchecked_ref(),
+        Closure::wrap(Box::new(move || {
+            performRedo(&gizmoTransform.0, cloneForRedo.clone(), &gizmoTransform.1);
+        }) as Box<dyn FnMut()>).as_ref().unchecked_ref(),
+        display,
         "property"
     );
 }

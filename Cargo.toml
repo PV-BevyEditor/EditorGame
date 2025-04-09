@@ -24,7 +24,7 @@ rand = "0.9.0"
 rfd = "0.15.3"
 serde = { version = "1.0.219", optional = true }
 # transform-gizmo-bevy = { git = "https://github.com/PV-BevyEditor/transform-gizmo.git" }
-transform-gizmo-bevy = { path = "E:\\Bevy\\BevyEditor\\transform-gizmo\\crates\\transform-gizmo-bevy" }
+transform-gizmo-bevy = { path = "/home/filip/Documents/GitHub/Editor/transform-gizmo/crates/transform-gizmo-bevy" }
 wasm-bindgen = "0.2.100"
 getrandom = { version = "0.3", features = ["wasm_js"] } # despite not using this directly, we have to overwrite the indirect depdendency with this as we need to add the wasm_js feature
 once_cell = "1.21.3"

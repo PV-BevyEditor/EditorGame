@@ -11,6 +11,8 @@ use bevy_mod_outline::{
 use js_sys::{Object, Reflect, JsString};
 use std::collections::HashMap;
 use transform_gizmo_bevy::{prelude::*, GizmoTransform};
+
+#[allow(unused_imports)]
 use crate::{
     lib::editorvisibility::EditorVisible, wasm::definitions::{addToHistory, consoleLog}, EditorConfiguration, RotationCamera
 };
@@ -33,17 +35,6 @@ pub fn worldFrame(
 
     // Need to debug here, as it seems this might be triggering more than once per mouse press
     if mouseButtonInput.just_pressed(MouseButton::Left) {
-        // let mut testState: SystemState<Query<&GizmoTarget>> = SystemState::new(world);
-        // let gizmoTargets = testState.get(world);
-        // for target in gizmoTargets.iter() {
-        //     let results = target.results(None);
-        //     consoleLog(&format!("Amount of results: {}", results.len()));
-        //     for target in target.results(None) {
-        //         consoleLog(&format!("{:?}", target));
-        //     }
-        // }
-        // consoleLog(&format!("Stuff: {:?}", gizmoTargets.iter().map(|target| target.results(None).iter().collect::<Vec<&GizmoResult>>())));
-
         let mut gizmoTargetState: SystemState<Query<Entity, With<GizmoTarget>>> = SystemState::new(world);
         let gizmoTarget = match gizmoTargetState.get(world).get_single() {
             Ok(target) => target,
@@ -227,22 +218,20 @@ pub fn syncData(
 
 pub fn update(
     mut gizmoEvents: EventReader<GizmoTransform>,
+    mut transformableEntityQuery: Query<(Entity, &mut Transform)>,
 ) {
     for gizmoTransform in gizmoEvents.read() {
-        // consoleLog(&format!("{:?}", event));
-        let undoAction = Box::new(move || {
-            let entity = gizmoTransform.0;
-            
-        }) as Box<dyn Fn() + 'static>;
-        let redoAction = Box::new(move || {
-            let entity = gizmoTransform.0;
-            
-        }) as Box<dyn Fn() + 'static>;
+        for (entity, transform) in transformableEntityQuery.iter_mut() {
+            if entity != gizmoTransform.0 { continue; }
 
-        addToHistory(
-            undoAction,
-            redoAction, 
-            "Transform mesh",
-        );
+            let gizmoTransform: &'static GizmoTransform = Box::leak(Box::new(gizmoTransform.clone()));
+            let transform: &'static mut Transform = Box::leak(Box::new(transform.clone()));
+
+            addToHistory(
+                gizmoTransform,
+                transform,
+                "Transform mesh",
+            );
+        }
     }
 }

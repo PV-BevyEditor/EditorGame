@@ -88,7 +88,7 @@ impl Runner {
         consoleLog("Creating a runner");
                 
         Runner {
-            gizmoFlags: Arc::new(AtomicU8::new(scaleIsVisibleBit | translationIsVisibleBit | rotationIsVisibleBit)),
+            gizmoFlags: Arc::new(AtomicU8::new(translationIsVisibleBit)),
             binaryData: Arc::new(BinaryDataQueue {
                 model: RwLock::new(None),
                 image: RwLock::new(None),
@@ -151,7 +151,7 @@ impl Runner {
                 // Since we're just cloning the arcs, we're creating new references, without actually duplicating any potential data
                 binaryData: self.binaryData.clone()
             })
-            
+
             .add_systems(Startup, (setup, setupDynamicAssets).chain())
             .add_systems(Update, (syncData, mouseInteractions, keyboardInteractions, update).chain())
             .add_systems(PostUpdate, worldFrame)
