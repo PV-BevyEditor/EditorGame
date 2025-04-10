@@ -5,18 +5,17 @@ use std::sync::{
     }, Arc, RwLock
 };
 use bevy::{
-    prelude::*,
-    window::PresentMode,
     dev_tools::fps_overlay::{
         FpsOverlayConfig,
         FpsOverlayPlugin,
-    },
+    }, prelude::*, window::PresentMode
 };
 use bevy_mod_outline::OutlinePlugin;
 use transform_gizmo_bevy::prelude::*;
 use wasm_bindgen::prelude::wasm_bindgen;
 use crate::{
     consoleLog,
+    lib::history::*,
     systems::{
         startup::*,
         update::*,
@@ -72,12 +71,14 @@ pub struct BinaryDataQueue {
 pub struct Runner {
     gizmoFlags: Arc<AtomicU8>,
     binaryData: Arc<BinaryDataQueue>,
+    history: Arc<RwLock<History>>,
 }
 
 #[derive(Resource)]
 pub struct RunnerWrapper {
     // pub runner: Arc<Runner>,
     pub binaryData: Arc<BinaryDataQueue>,
+    pub history: Arc<RwLock<History>>,
 }
 
 // #[cfg(target_arch = "wasm32")]
@@ -93,13 +94,14 @@ impl Runner {
                 model: RwLock::new(None),
                 image: RwLock::new(None),
             }),
+            history: Arc::new(RwLock::new(History::new())),
         }
     }
 
     #[wasm_bindgen]
     pub fn startGame(&self) {
-        let mut app = App::new();
-        app.add_plugins((
+        App::new()
+            .add_plugins((
                 DefaultPlugins.set(WindowPlugin {
                     primary_window: Some(Window {
                         // Fifo: only present mode that wasm accepts, so can't actually turn vsync off :pensive:
@@ -132,11 +134,11 @@ impl Runner {
                 MeshPickingPlugin,
                 TransformGizmoPlugin,
             ))
+
             .insert_resource(MeshPickingSettings {
                 require_markers: true,
                 ..default()
             })
-            // .insert_resource(*self.gizmoOptions.lock().unwrap())
             .insert_resource(GizmoOptions {
                 gizmo_orientation: GizmoOrientation::Local,
                 ..default()
@@ -149,12 +151,14 @@ impl Runner {
             })
             .insert_resource(RunnerWrapper {
                 // Since we're just cloning the arcs, we're creating new references, without actually duplicating any potential data
-                binaryData: self.binaryData.clone()
+                binaryData: self.binaryData.clone(),
+                history: self.history.clone()
             })
 
             .add_systems(Startup, (setup, setupDynamicAssets).chain())
             .add_systems(Update, (syncData, mouseInteractions, keyboardInteractions, update).chain())
             .add_systems(PostUpdate, worldFrame)
+            
             .run();
     }
 
@@ -168,5 +172,32 @@ impl Runner {
         if let Ok(mut data) = self.binaryData.model.write() {
             *data = Some(bytes.to_vec());
         }
+    }
+
+    #[wasm_bindgen]
+    pub fn sendEvent(&self, eventType: &str) {
+        match eventType {
+            "undo" => {
+                if let Ok(mut history) = self.history.write() {
+                    // history.undo();
+                    history.action = HistoryAction::Undo;
+                } else {
+                    consoleLog("Tried writing simultaneously while undoing");
+                }
+            },
+            "redo" => {
+                if let Ok(mut history) = self.history.write() {
+                    // history.redo();
+                    history.action = HistoryAction::Redo;
+                    consoleLog("Tried writing simultaneously while redoing");
+                }
+            },
+            "read" => {
+                if let Ok(history) = self.history.read() {
+                    consoleLog(&format!("Past: {:?}\n\nFuture: {:?}", history.past, history.future));
+                }
+            },
+            _ => {}
+        };
     }
 }

@@ -48,11 +48,9 @@ fn performUndo(_entity: &'static Entity, transform: Arc<Mutex<&mut Transform>>, 
             transform.lock().unwrap().translation -= Vec3::new(total.x as f32, total.y as f32, total.z as f32);
         },
         GizmoResult::Rotation { axis, delta: _, total, is_view_axis: _ } => {
-            // transform.rotation = transform.rotation * Quat::from_axis_angle(Vec3::new(axis.x as f32, axis.y as f32, axis.z as f32), -total as f32);
             transform.lock().unwrap().rotation *= Quat::from_axis_angle(Vec3::new(axis.x as f32, axis.y as f32, axis.z as f32), -total as f32);
         },
         GizmoResult::Scale { total } => {
-            // transform.scale = transform.scale / Vec3::new(total.x as f32, total.y as f32, total.z as f32);
             transform.lock().unwrap().scale /= Vec3::new(total.x as f32, total.y as f32, total.z as f32);
         },
         _ => {},

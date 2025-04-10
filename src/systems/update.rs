@@ -20,7 +20,10 @@ use crate::{
 use {
     crate::{
         wasm::data::*,
-        lib::assetloader::*,
+        lib::{
+            assetloader::*,
+            history::*,
+        },
         triggerInterfaceCallbacks,
         // consoleLog,
     },
@@ -219,19 +222,73 @@ pub fn syncData(
 pub fn update(
     mut gizmoEvents: EventReader<GizmoTransform>,
     mut transformableEntityQuery: Query<(Entity, &mut Transform)>,
+    mut runnerWrapper: ResMut<RunnerWrapper>,
 ) {
-    for gizmoTransform in gizmoEvents.read() {
-        for (entity, transform) in transformableEntityQuery.iter_mut() {
-            if entity != gizmoTransform.0 { continue; }
+    let events = gizmoEvents.read().collect::<Vec<&GizmoTransform>>();
+    let runner = runnerWrapper.as_mut();
+    
+    if !events.is_empty() {
+        for gizmoTransform in events {
+            for (entity, transform) in transformableEntityQuery.iter_mut() {
+                if entity != gizmoTransform.0 { continue; }
+    
+                if let Ok(mut history) = runner.history.write() {
+                    history.future.clear();
+                    history.past.push(
+                        HistoryItem::Transform(
+                            *gizmoTransform,
+                            *transform,
+                        ),
+                    );
+                }
+            }
+        }
+    }
 
-            let gizmoTransform: &'static GizmoTransform = Box::leak(Box::new(gizmoTransform.clone()));
-            let transform: &'static mut Transform = Box::leak(Box::new(transform.clone()));
+    if let Ok(mut history) = runner.history.write() {
+        if matches!(history.action, HistoryAction::None) { return; }
+        
+        let isUndo = matches!(history.action, HistoryAction::Undo);
+        history.action = HistoryAction::None;
 
-            addToHistory(
-                gizmoTransform,
-                transform,
-                "Transform mesh",
-            );
+        if let Some(gizmoTransform) = if isUndo { history.past.pop() } else { history.future.pop() } {
+            for (entity, mut transform) in transformableEntityQuery.iter_mut() {
+                match gizmoTransform {
+                    HistoryItem::Transform(gizmoTransform, _) => {
+                        if entity != gizmoTransform.0 { continue; }
+    
+                        if isUndo {
+                            match gizmoTransform.1 {
+                                GizmoResult::Translation { delta: _, total } => {
+                                    consoleLog(&format!("Undoing translation from:\n{:?}", transform.translation));
+                                    transform.translation -= Vec3::new(total.x as f32, total.y as f32, total.z as f32);
+                                    consoleLog(&format!("To:\n{:?}", transform.translation));
+                                },
+                                GizmoResult::Rotation { axis, delta: _, total, is_view_axis: _ } => {
+                                    transform.rotation *= Quat::from_axis_angle(Vec3::new(axis.x as f32, axis.y as f32, axis.z as f32), -total as f32);
+                                },
+                                GizmoResult::Scale { total } => {
+                                    transform.scale /= Vec3::new(total.x as f32, total.y as f32, total.z as f32);
+                                },
+                                _ => {},
+                            };
+                        } else {
+                            match gizmoTransform.1 {
+                                GizmoResult::Translation { delta: _, total } => {
+                                    transform.translation += Vec3::new(total.x as f32, total.y as f32, total.z as f32);
+                                },
+                                GizmoResult::Rotation { axis, delta: _, total, is_view_axis: _ } => {
+                                    transform.rotation *= Quat::from_axis_angle(Vec3::new(axis.x as f32, axis.y as f32, axis.z as f32), total as f32);
+                                },
+                                GizmoResult::Scale { total } => {
+                                    transform.scale *= Vec3::new(total.x as f32, total.y as f32, total.z as f32);
+                                },
+                                _ => {},
+                            };
+                        }
+                    },
+                };
+            }
         }
     }
 }

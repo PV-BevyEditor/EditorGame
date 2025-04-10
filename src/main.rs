@@ -6,6 +6,7 @@ mod lib {
     pub mod editorconfig;
     pub mod editorvisibility;
     pub mod jscasting;
+    pub mod history;
 }
 mod wasm {
     pub mod definitions;

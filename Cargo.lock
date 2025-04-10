@@ -5447,6 +5447,7 @@ dependencies = [
 [[package]]
 name = "transform-gizmo"
 version = "0.5.1"
+source = "git+https://github.com/PV-BevyEditor/transform-gizmo.git#b61b7cc8d0034d7f714e89b326fda97a87b62c7b"
 dependencies = [
  "ahash",
  "ecolor",
@@ -5461,6 +5462,7 @@ dependencies = [
 [[package]]
 name = "transform-gizmo-bevy"
 version = "0.5.1"
+source = "git+https://github.com/PV-BevyEditor/transform-gizmo.git#b61b7cc8d0034d7f714e89b326fda97a87b62c7b"
 dependencies = [
  "bevy",
  "bevy_app",
