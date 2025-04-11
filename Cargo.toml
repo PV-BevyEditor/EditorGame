@@ -23,6 +23,7 @@ image = "0.25.6"
 rand = "0.9.0"
 rfd = "0.15.3"
 serde = { version = "1.0.219", optional = true }
+serde_derive = "1.0.219"
 transform-gizmo-bevy = { git = "https://github.com/PV-BevyEditor/transform-gizmo.git" }
 # transform-gizmo-bevy = { path = "/home/filip/Documents/GitHub/Editor/transform-gizmo/crates/transform-gizmo-bevy" }
 wasm-bindgen = "0.2.100"

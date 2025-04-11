@@ -3,7 +3,7 @@ use transform_gizmo_bevy::{GizmoResult, GizmoTransform};
 
 use crate::wasm::definitions::consoleLog;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum HistoryItem {
     Transform(GizmoTransform, Transform),
 }

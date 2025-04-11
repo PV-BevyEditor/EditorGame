@@ -1,9 +1,9 @@
-use std::sync::{
+use std::{any, sync::{
     atomic::{
         AtomicU8, 
         Ordering
     }, Arc, RwLock
-};
+}};
 use bevy::{
     dev_tools::fps_overlay::{
         FpsOverlayConfig,
@@ -81,6 +81,13 @@ pub struct RunnerWrapper {
     pub history: Arc<RwLock<History>>,
 }
 
+#[derive(serde_derive::Deserialize, serde_derive::Serialize)]
+pub struct PropertyUpdateInfo {
+    pub componentName: &str,
+    pub property: &str,
+    pub value: any,
+}
+
 // #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 impl Runner {
@@ -156,7 +163,7 @@ impl Runner {
             })
 
             .add_systems(Startup, (setup, setupDynamicAssets).chain())
-            .add_systems(Update, (syncData, mouseInteractions, keyboardInteractions, update).chain())
+            .add_systems(Update, (syncData, mouseInteractions, keyboardInteractions, handleHistory, handleUndoRedo).chain())
             .add_systems(PostUpdate, worldFrame)
             
             .run();
@@ -175,11 +182,10 @@ impl Runner {
     }
 
     #[wasm_bindgen]
-    pub fn sendEvent(&self, eventType: &str) {
+    pub fn sendEvent(&self, eventType: &str, info: &str) {
         match eventType {
             "undo" => {
                 if let Ok(mut history) = self.history.write() {
-                    // history.undo();
                     history.action = HistoryAction::Undo;
                 } else {
                     consoleLog("Tried writing simultaneously while undoing");
@@ -187,7 +193,6 @@ impl Runner {
             },
             "redo" => {
                 if let Ok(mut history) = self.history.write() {
-                    // history.redo();
                     history.action = HistoryAction::Redo;
                     consoleLog("Tried writing simultaneously while redoing");
                 }
@@ -196,6 +201,9 @@ impl Runner {
                 if let Ok(history) = self.history.read() {
                     consoleLog(&format!("Past: {:?}\n\nFuture: {:?}", history.past, history.future));
                 }
+            },
+            "setProperty" => {
+                let info: PropertyUpdateInfo = serde_json::from_str(info).unwrap();
             },
             _ => {}
         };

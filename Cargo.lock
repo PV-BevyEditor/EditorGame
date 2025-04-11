@@ -2277,6 +2277,7 @@ dependencies = [
  "rfd",
  "ron 0.9.0",
  "serde",
+ "serde_derive",
  "transform-gizmo-bevy",
  "uuid",
  "wasm-bindgen",

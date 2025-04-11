@@ -14,7 +14,7 @@ use transform_gizmo_bevy::{prelude::*, GizmoTransform};
 
 #[allow(unused_imports)]
 use crate::{
-    lib::editorvisibility::EditorVisible, wasm::definitions::{addToHistory, consoleLog}, EditorConfiguration, RotationCamera
+    lib::editorvisibility::EditorVisible, wasm::definitions::consoleLog, EditorConfiguration, RotationCamera
 };
 #[cfg(target_arch = "wasm32")]
 use {
@@ -219,14 +219,14 @@ pub fn syncData(
     }
 }
 
-pub fn update(
+pub fn handleHistory(
     mut gizmoEvents: EventReader<GizmoTransform>,
-    mut transformableEntityQuery: Query<(Entity, &mut Transform)>,
     mut runnerWrapper: ResMut<RunnerWrapper>,
+    mut transformableEntityQuery: Query<(Entity, &mut Transform)>,
 ) {
     let events = gizmoEvents.read().collect::<Vec<&GizmoTransform>>();
     let runner = runnerWrapper.as_mut();
-    
+
     if !events.is_empty() {
         for gizmoTransform in events {
             for (entity, transform) in transformableEntityQuery.iter_mut() {
@@ -244,6 +244,13 @@ pub fn update(
             }
         }
     }
+}
+
+pub fn handleUndoRedo(
+    mut runnerWrapper: ResMut<RunnerWrapper>,
+    mut transformableEntityQuery: Query<(Entity, &mut Transform)>,
+) {
+    let runner = runnerWrapper.as_mut();
 
     if let Ok(mut history) = runner.history.write() {
         if matches!(history.action, HistoryAction::None) { return; }
@@ -251,9 +258,9 @@ pub fn update(
         let isUndo = matches!(history.action, HistoryAction::Undo);
         history.action = HistoryAction::None;
 
-        if let Some(gizmoTransform) = if isUndo { history.past.pop() } else { history.future.pop() } {
+        if let Some(historyItem) = if isUndo { history.past.pop() } else { history.future.pop() } {
             for (entity, mut transform) in transformableEntityQuery.iter_mut() {
-                match gizmoTransform {
+                match historyItem {
                     HistoryItem::Transform(gizmoTransform, _) => {
                         if entity != gizmoTransform.0 { continue; }
     
@@ -272,6 +279,8 @@ pub fn update(
                                 },
                                 _ => {},
                             };
+
+                            history.future.push(historyItem.clone());
                         } else {
                             match gizmoTransform.1 {
                                 GizmoResult::Translation { delta: _, total } => {
@@ -285,6 +294,8 @@ pub fn update(
                                 },
                                 _ => {},
                             };
+
+                            history.past.push(historyItem.clone());
                         }
                     },
                 };
