@@ -1,5 +1,5 @@
 use bevy::{
-    ecs::system::SystemState, input::mouse::MouseMotion, picking::pointer::PointerInteraction, prelude::*, window::{
+    input::mouse::MouseMotion, picking::pointer::PointerInteraction, prelude::*, window::{
         CursorGrabMode, 
         PrimaryWindow, 
     }
@@ -8,7 +8,7 @@ use bevy_mod_outline::{
     OutlineStencil,
     OutlineVolume,
 };
-use js_sys::{Object, Reflect, JsString};
+// use js_sys::{Object, Reflect, JsString};
 use std::collections::HashMap;
 use transform_gizmo_bevy::{prelude::*, GizmoTransform};
 
@@ -24,41 +24,11 @@ use {
             assetloader::*,
             history::*,
         },
-        triggerInterfaceCallbacks,
+        // triggerInterfaceCallbacks,
         // consoleLog,
     },
     std::sync::atomic::Ordering,
 };
-
-pub fn worldFrame(
-    world: &mut World,
-) {
-    let mut mouseButtonInputState: SystemState<Res<ButtonInput<MouseButton>>> = SystemState::new(world);
-    let mouseButtonInput = mouseButtonInputState.get(world);
-
-    // Need to debug here, as it seems this might be triggering more than once per mouse press
-    if mouseButtonInput.just_pressed(MouseButton::Left) {
-        let mut gizmoTargetState: SystemState<Query<Entity, With<GizmoTarget>>> = SystemState::new(world);
-        let gizmoTarget = match gizmoTargetState.get(world).get_single() {
-            Ok(target) => target,
-            Err(_) => return triggerInterfaceCallbacks("properties", vec![]),
-        };
-
-        let mut infoVec: Vec<Object> = vec![];
-        for (_, component) in world.inspect_entity(gizmoTarget).enumerate() {
-            if !component.isEditorVisible() { continue; }
-
-            let obj = Object::new();
-
-            Reflect::set(&obj, &JsString::from("name"), &JsString::from(component.name())).unwrap();
-            Reflect::set(&obj, &JsString::from("info"), &component.getInfo(world, gizmoTarget).into()).unwrap();
-
-            infoVec.push(obj);
-        }
-        
-        triggerInterfaceCallbacks("properties", infoVec);
-    }
-}
 
 pub fn mouseInteractions(
     mut windows: Query<&mut Window, With<PrimaryWindow>>,
@@ -302,4 +272,58 @@ pub fn handleUndoRedo(
             }
         }
     }
+}
+
+pub fn handlePropertyUpdates(
+    mut query: Query<(
+        Entity, 
+        &mut Transform,
+        Option<&mut Visibility>,
+        Option<&mut Mesh3d>,
+        Option<&mut MeshMaterial3d<StandardMaterial>>,
+    ), With<GizmoTarget>>,
+    mut runnerWrapper: ResMut<RunnerWrapper>,
+) {
+    if query.is_empty() { return; }
+
+    let mut target = query.single_mut();
+    let runner = runnerWrapper.as_mut();
+
+    consoleLog(&format!("before: {:?}", target.1));
+
+    if let Ok(mut propertyUpdateList) = runner.propertyUpdateList.write() {
+        while propertyUpdateList.properties.len() > 0 {
+            consoleLog(&format!("Length is {}", propertyUpdateList.properties.len()));
+            let propertyUpdate = propertyUpdateList.properties.remove(0);
+            
+            match propertyUpdate.componentName.as_str() {
+                "Transform" => {
+                    match propertyUpdate.property.as_str() {
+                        "translation" => {
+                            if let ComponentProperty::Vec3(vec) = propertyUpdate.value {
+                                target.1.translation = vec;
+                                consoleLog(&format!("inside: {:?}\n{:?}", target.1, vec));
+                            }
+                        },
+                        "rotation" => {
+                            if let ComponentProperty::Quat(quat) = propertyUpdate.value {
+                                target.1.rotation = quat;
+                                consoleLog(&format!("inside2: {:?}\n{:?}", target.1, quat));
+                            }
+                        },
+                        "scale" => {
+                            if let ComponentProperty::Vec3(vec) = propertyUpdate.value {
+                                target.1.scale = vec;
+                                consoleLog(&format!("inside3: {:?}\n{:?}", target.1, vec));
+                            }
+                        },
+                        _ => {},
+                    }
+                },
+                _ => {},
+            }
+        }
+    }
+
+    consoleLog(&format!("after: {:?}", target.1));
 }

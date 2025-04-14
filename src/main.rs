@@ -17,6 +17,7 @@ mod wasm {
 mod systems {
     pub mod startup;
     pub mod update;
+    pub mod world;
 }
 
 use lib::{

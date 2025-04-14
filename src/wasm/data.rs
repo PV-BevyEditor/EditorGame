@@ -1,9 +1,9 @@
-use std::{any, sync::{
+use std::sync::{
     atomic::{
         AtomicU8, 
         Ordering
     }, Arc, RwLock
-}};
+};
 use bevy::{
     dev_tools::fps_overlay::{
         FpsOverlayConfig,
@@ -13,12 +13,17 @@ use bevy::{
 use bevy_mod_outline::OutlinePlugin;
 use transform_gizmo_bevy::prelude::*;
 use wasm_bindgen::prelude::wasm_bindgen;
+use serde::{
+    *,
+    de::Error,
+};
 use crate::{
     consoleLog,
     lib::history::*,
     systems::{
         startup::*,
         update::*,
+        world::*,
     },
 };
 
@@ -61,6 +66,8 @@ pub struct PreviousCustomGizmoOptions {
 }
 
 // #[derive(Resource)]
+// pub struct 
+
 pub struct BinaryDataQueue {
     pub model: RwLock<Option<Vec<u8>>>,
     pub image: RwLock<Option<Vec<u8>>>,
@@ -72,6 +79,7 @@ pub struct Runner {
     gizmoFlags: Arc<AtomicU8>,
     binaryData: Arc<BinaryDataQueue>,
     history: Arc<RwLock<History>>,
+    propertyUpdateList: Arc<RwLock<PropertiesUpdateList>>,
 }
 
 #[derive(Resource)]
@@ -79,13 +87,52 @@ pub struct RunnerWrapper {
     // pub runner: Arc<Runner>,
     pub binaryData: Arc<BinaryDataQueue>,
     pub history: Arc<RwLock<History>>,
+    pub propertyUpdateList: Arc<RwLock<PropertiesUpdateList>>,
 }
 
-#[derive(serde_derive::Deserialize, serde_derive::Serialize)]
+#[derive(Serialize, Debug)]
+pub enum ComponentProperty {
+    Vec3(Vec3),
+    Quat(Quat),
+}
+impl <'de> Deserialize<'de> for ComponentProperty {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+        #[derive(Deserialize)]
+        struct Vec3Like {
+            x: f32,
+            y: f32,
+            z: f32,
+        }
+        #[derive(Deserialize)]
+        struct QuatLike {
+            x: f32,
+            y: f32,
+            z: f32,
+            w: f32
+        }
+
+        let val = serde_json::Value::deserialize(deserializer)?;
+
+        if let Ok(vec) = Vec3Like::deserialize(&val) {
+            return Ok(ComponentProperty::Vec3(Vec3::new(vec.x, vec.y, vec.z)));
+        } else if let Ok(quat) = QuatLike::deserialize(&val) {
+            return Ok(ComponentProperty::Quat(Quat::from_xyzw(quat.x, quat.y, quat.z, quat.w)));
+        }
+
+        Err(D::Error::custom("Failed to deserialise as any supported component property"))
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug)]
 pub struct PropertyUpdateInfo {
-    pub componentName: &str,
-    pub property: &str,
-    pub value: any,
+    pub componentName: String,
+    pub property: String,
+    pub value: ComponentProperty,
+}
+
+#[derive(Resource)]
+pub struct PropertiesUpdateList {
+    pub properties: Vec<PropertyUpdateInfo>,
 }
 
 // #[cfg(target_arch = "wasm32")]
@@ -102,6 +149,9 @@ impl Runner {
                 image: RwLock::new(None),
             }),
             history: Arc::new(RwLock::new(History::new())),
+            propertyUpdateList: Arc::new(RwLock::new(PropertiesUpdateList {
+                properties: Vec::new(),
+            })),
         }
     }
 
@@ -159,12 +209,14 @@ impl Runner {
             .insert_resource(RunnerWrapper {
                 // Since we're just cloning the arcs, we're creating new references, without actually duplicating any potential data
                 binaryData: self.binaryData.clone(),
-                history: self.history.clone()
+                history: self.history.clone(),
+                propertyUpdateList: self.propertyUpdateList.clone(),
             })
 
             .add_systems(Startup, (setup, setupDynamicAssets).chain())
-            .add_systems(Update, (syncData, mouseInteractions, keyboardInteractions, handleHistory, handleUndoRedo).chain())
-            .add_systems(PostUpdate, worldFrame)
+            .add_systems(Update, (syncData, mouseInteractions, keyboardInteractions, handleHistory, handleUndoRedo, handlePropertyUpdates).chain())
+            // .add_systems(PostUpdate, (worldFrame, worldUpdates).chain())
+            .add_systems(PostUpdate, (worldFrame).chain())
             
             .run();
     }
@@ -204,6 +256,13 @@ impl Runner {
             },
             "setProperty" => {
                 let info: PropertyUpdateInfo = serde_json::from_str(info).unwrap();
+                consoleLog(&format!("{:?}", info));
+
+                consoleLog("Writing");
+                if let Ok(mut list) = self.propertyUpdateList.write() {
+                    list.properties.push(info);
+                    consoleLog("Written");
+                }
             },
             _ => {}
         };

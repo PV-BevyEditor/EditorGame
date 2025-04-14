@@ -138,7 +138,7 @@ impl EditorVisible for ComponentInfo {
                 let transformComponent = world.get::<Transform>(entity).unwrap();
 
                 return asJsObject(vec![
-                    ("position", transformComponent.translation.intoJs().into()),
+                    ("translation", transformComponent.translation.intoJs().into()),
                     ("rotation", transformComponent.rotation.intoJs().into()),
                     ("scale", transformComponent.scale.intoJs().into()),
                 ]);
