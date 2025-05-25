@@ -36,7 +36,6 @@ pub fn mouseInteractions(
     mut mouseMotionEvents: EventReader<MouseMotion>,
     mut clickables: Query<(Entity, &mut OutlineVolume), (With<Mesh3d>, With<OutlineStencil>)>,
     mut commands: Commands,
-    gizmoTargets: Query<Entity, With<GizmoTarget>>,
     mouseButtonInput: Res<ButtonInput<MouseButton>>,
     pointers: Query<&PointerInteraction>,
 ) {
@@ -59,14 +58,6 @@ pub fn mouseInteractions(
         }
     }
     if mouseButtonInput.just_pressed(MouseButton::Left) {
-        // Remove GizmoTargets in existing places and make selection outlines invisible
-        for entity in gizmoTargets.iter() {
-            commands.entity(entity).remove::<GizmoTarget>();
-        }
-        for mut clickable in clickables.iter_mut() {
-            clickable.1.visible = false;
-        }
-
         if let Some((point, _normal)) = pointers.iter().filter_map(|interaction| interaction.get_nearest_hit()).into_iter().nth(0) {
             if let Ok((entity, mut outlineVolume)) = clickables.get_mut(*point) {
                 // Handle outline and gizmos
@@ -92,7 +83,10 @@ pub fn mouseInteractions(
 
 pub fn keyboardInteractions(
     mut cameraTransformQuery: Query<&mut Transform, With<RotationCamera>>,
+    mut clickables: Query<(Entity, &mut OutlineVolume), (With<Mesh3d>, With<OutlineStencil>)>,
     mut gizmoSettings: ResMut<GizmoOptions>,
+    mut commands: Commands,
+    gizmoTargets: Query<Entity, With<GizmoTarget>>,
     keyboardInput: Res<ButtonInput<KeyCode>>,
     configQuery: Query<&EditorConfiguration>,
     time: Res<Time>,
@@ -113,6 +107,7 @@ pub fn keyboardInteractions(
         (KeyCode::KeyE, Vec3::Y),
     ].into_iter().collect();
 
+    // Handle camera movement
     for (key, vec) in directionKeyMap.iter() {
         if !keyboardInput.pressed(*key) { continue }
 
@@ -120,8 +115,19 @@ pub fn keyboardInteractions(
         cameraTransform.translation += forward * cameraSpeed * time.delta_secs();
     }
 
+    // Toggle between global and local transform gizmo's, should move to a single separate shortcut system
     if keyboardInput.pressed(KeyCode::ControlLeft) && keyboardInput.just_pressed(KeyCode::KeyL) {
         gizmoSettings.gizmo_orientation = if gizmoSettings.gizmo_orientation == GizmoOrientation::Global { GizmoOrientation::Local } else { GizmoOrientation::Global }
+    }
+
+    // Handle deselecting selected objects
+    if keyboardInput.just_pressed(KeyCode::Escape) {
+        for entity in gizmoTargets.iter() {
+            commands.entity(entity).remove::<GizmoTarget>();
+        }
+        for mut clickable in clickables.iter_mut() {
+            clickable.1.visible = false;
+        }
     }
 }
 
@@ -129,12 +135,15 @@ pub fn keyboardInteractions(
 pub fn syncData(
     mut gizmoOptions: ResMut<GizmoOptions>,
     mut commands: Commands,
-    meshes: ResMut<Assets<Mesh>>,
-    images: ResMut<Assets<Image>>,
+    assetServer: ResMut<AssetServer>,
+    memDir: ResMut<MemoryDir>,
+    // meshes: ResMut<Assets<Mesh>>,
+    // images: ResMut<Assets<Image>>,
+    // materials: ResMut<Assets<StandardMaterial>>,
     last: Res<PreviousCustomGizmoOptions>,
     sync: Res<CustomGizmoOptions>,
     runner: Res<RunnerWrapper>,
-    materials: Query<&MeshMaterial3d<StandardMaterial>>,
+    // materialQuery: Query<&MeshMaterial3d<StandardMaterial>>,
     configQuery: Query<&EditorConfiguration>,
 ) {
     // Handling Gizmo option flags
@@ -159,29 +168,55 @@ pub fn syncData(
     // Handling model loading
     if let Ok(mut modelGuard) = runner.binaryData.model.write() {
         if let Some(model) = modelGuard.take() {
-            let importedMeshes = loadModel(meshes, &model).unwrap();
+            // let importedMeshes = loadModel(meshes, images, materials, &model).unwrap();
+            let importHandle = loadModelV2(assetServer, "TestAsset.glb".into(), memDir, model);
 
-            for meshHandle in importedMeshes.iter() {
-                let material = materials.single();
+            commands.spawn((
+                SceneRoot(importHandle),
+                OutlineStencil {
+                    enabled: true,
+                    offset: 0.,
+                },
+                OutlineVolume {
+                    colour: configQuery.single().selection.selectionColour,
+                    width: 3.,
+                    visible: false,
+                },
+                RayCastPickable,
+                GizmoTarget::default(),
+            ));
 
-                commands.spawn((
-                    Mesh3d(meshHandle.clone()),
-                    material.clone(),
-                    OutlineStencil {
-                        enabled: true,
-                        offset: 0.,
-                    },
-                    OutlineVolume {
-                        colour: configQuery.single().selection.selectionColour,
-                        width: 3.,
-                        visible: false,
-                    },
-                    RayCastPickable,
-                    GizmoTarget::default(),
-                ));
-            }
+            // for (mesh, meshMat) in importedMeshes.iter() {
+            //     // let material = materialQuery.single();
+            //     consoleLog("Start of mesh spawning");
+                
+            //     commands.spawn((
+            //         Mesh3d(mesh.clone()),
+            //         MeshMaterial3d(meshMat.clone()),
+            //         // material.clone(),
+            //         OutlineStencil {
+            //             enabled: true,
+            //             offset: 0.,
+            //         },
+            //         OutlineVolume {
+            //             colour: configQuery.single().selection.selectionColour,
+            //             width: 3.,
+            //             visible: false,
+            //         },
+            //         RayCastPickable,
+            //         GizmoTarget::default(),
+            //     ));
+
+            //     consoleLog("End of mesh spawning");
+            // }
         }
     }
+}
+
+pub fn syncImages(
+    images: ResMut<Assets<Image>>,
+    runner: Res<RunnerWrapper>,
+) {
     if let Ok(mut imageGuard) = runner.binaryData.image.write() {
         if let Some(image) = imageGuard.take() {
             loadImage(images, &image).unwrap();
@@ -289,8 +324,6 @@ pub fn handlePropertyUpdates(
     let mut target = query.single_mut();
     let runner = runnerWrapper.as_mut();
 
-    consoleLog(&format!("before: {:?}", target.1));
-
     if let Ok(mut propertyUpdateList) = runner.propertyUpdateList.write() {
         while propertyUpdateList.properties.len() > 0 {
             consoleLog(&format!("Length is {}", propertyUpdateList.properties.len()));
@@ -302,19 +335,16 @@ pub fn handlePropertyUpdates(
                         "translation" => {
                             if let ComponentProperty::Vec3(vec) = propertyUpdate.value {
                                 target.1.translation = vec;
-                                consoleLog(&format!("inside: {:?}\n{:?}", target.1, vec));
                             }
                         },
                         "rotation" => {
                             if let ComponentProperty::Quat(quat) = propertyUpdate.value {
                                 target.1.rotation = quat;
-                                consoleLog(&format!("inside2: {:?}\n{:?}", target.1, quat));
                             }
                         },
                         "scale" => {
                             if let ComponentProperty::Vec3(vec) = propertyUpdate.value {
                                 target.1.scale = vec;
-                                consoleLog(&format!("inside3: {:?}\n{:?}", target.1, vec));
                             }
                         },
                         _ => {},
@@ -324,6 +354,4 @@ pub fn handlePropertyUpdates(
             }
         }
     }
-
-    consoleLog(&format!("after: {:?}", target.1));
 }

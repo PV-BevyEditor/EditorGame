@@ -2270,6 +2270,7 @@ dependencies = [
  "bytemuck",
  "getrandom 0.3.2",
  "gltf",
+ "gltf-json",
  "image",
  "js-sys",
  "once_cell",

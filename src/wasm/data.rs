@@ -5,7 +5,7 @@ use std::sync::{
     }, Arc, RwLock
 };
 use bevy::{
-    dev_tools::fps_overlay::{
+    asset::io::{memory::{Dir, MemoryAssetReader}, AssetSource, AssetSourceId}, dev_tools::fps_overlay::{
         FpsOverlayConfig,
         FpsOverlayPlugin,
     }, prelude::*, window::PresentMode
@@ -135,6 +135,19 @@ pub struct PropertiesUpdateList {
     pub properties: Vec<PropertyUpdateInfo>,
 }
 
+#[derive(Resource)]
+pub struct MemoryDir {
+    pub dir: Dir,
+}
+
+impl Default for MemoryDir {
+    fn default() -> Self {
+        Self {
+            dir: Dir::default(),
+        }
+    }
+}
+
 // #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 impl Runner {
@@ -157,8 +170,19 @@ impl Runner {
 
     #[wasm_bindgen]
     pub fn startGame(&self) {
-        App::new()
-            .add_plugins((
+        let mut app = App::new();
+
+        let memDir = MemoryDir::default();
+        let reader = MemoryAssetReader {
+            root: memDir.dir.clone(),
+        };
+
+        app.register_asset_source(
+            AssetSourceId::from_static("memory"), 
+            AssetSource::build().with_reader(move || Box::new(reader.clone())),
+        );
+
+        app.add_plugins((
                 DefaultPlugins.set(WindowPlugin {
                     primary_window: Some(Window {
                         // Fifo: only present mode that wasm accepts, so can't actually turn vsync off :pensive:
@@ -212,11 +236,13 @@ impl Runner {
                 history: self.history.clone(),
                 propertyUpdateList: self.propertyUpdateList.clone(),
             })
+            // This is for loading assets from memory
+            .insert_resource(memDir)
 
             .add_systems(Startup, (setup, setupDynamicAssets).chain())
             .add_systems(Update, (syncData, mouseInteractions, keyboardInteractions, handleHistory, handleUndoRedo, handlePropertyUpdates).chain())
-            // .add_systems(PostUpdate, (worldFrame, worldUpdates).chain())
-            .add_systems(PostUpdate, (worldFrame).chain())
+            .add_systems(First, (worldFrame, worldUpdates).chain())
+            // .add_systems(PostUpdate, (worldFrame).chain())
             
             .run();
     }

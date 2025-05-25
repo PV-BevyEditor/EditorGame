@@ -4,7 +4,7 @@ use bevy::{
 use js_sys::{JsString, Object, Reflect};
 use transform_gizmo_bevy::GizmoTarget;
 
-use crate::{lib::{components::RotationCamera, editorvisibility::EditorVisible}, wasm::definitions::triggerInterfaceCallbacks};
+use crate::{lib::{components::RotationCamera, editorvisibility::EditorVisible}, wasm::definitions::{consoleLog, triggerInterfaceCallbacks}};
 
 fn trigger(world: &mut World) {
     let mut gizmoTargetState: SystemState<Query<Entity, With<GizmoTarget>>> = SystemState::new(world);
@@ -73,16 +73,18 @@ pub fn worldUpdates(
         visibility,
     ) = single;
 
-    if 
-        directionalLight.map_or(false, |r| r.is_changed()) 
-        || globalTransform.map_or(false, |r| r.is_changed())
-        || mesh3d.map_or(false, |r| r.is_changed())
-        || material.map_or(false, |r| r.is_changed())
-        || rayCastPickable.map_or(false, |r| r.is_changed())
-        || rotationCamera.map_or(false, |r| r.is_changed())
-        || sprite.map_or(false, |r| r.is_changed())
-        || transform.map_or(false, |r| r.is_changed())
-        || visibility.map_or(false, |r| r.is_changed())
+    consoleLog(&format!("Transform changed: {:?}", transform.as_ref().map_or(false, |r| r.is_changed())));
+
+    if transform.map_or(false, |r| r.is_changed())
+        // directionalLight.map_or(false, |r| r.is_changed()) 
+        // || globalTransform.map_or(false, |r| r.is_changed())
+        // || mesh3d.map_or(false, |r| r.is_changed())
+        // || material.map_or(false, |r| r.is_changed())
+        // || rayCastPickable.map_or(false, |r| r.is_changed())
+        // || rotationCamera.map_or(false, |r| r.is_changed())
+        // || sprite.map_or(false, |r| r.is_changed())
+        // || transform.map_or(false, |r| r.is_changed())
+        // || visibility.map_or(false, |r| r.is_changed())
     {
         trigger(world);
         return;
